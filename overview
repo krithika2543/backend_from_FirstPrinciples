@@ -1,0 +1,35 @@
+1. High level understanding: backend is a computer which is listening for a HTTP request or web socket or grpc through a 80 or 443 port which is in turn connected to the internet where clients can connect to through frontend and access data from the server. 
+   We call it server because it serves us with data either static files like images or javascript files or or html files in json format. it also accepts data if the clients send something
+2. entire pipeline: once we enter a url in a browser, the DNS resolver splits the url into domain, sub domains. An A record refers to the IP address of the url and CNAME is the alias names for the domain which links to the same IP address. So basically the dns RESOLVER WILL FIND THE CNAME for the url and get its A record, converting string to number format
+                    The browser creates a TCP connection with the server. TCP: Transmission control protocol is the rulebook two computers use to reliably exchange a stream of bytes over a network. Before any actual data flows, the two sides do a quick handshake to agree “yes, we’re both here and ready”: your machine sends a SYN packet (“hey, you there?”), the server replies SYN-ACK (“yes, I’m here”), your machine replies ACK (“great, let’s go”). Only after that three-step handshake does either side send real data — and TCP guarantees it arrives in order, with nothing missing, retransmitting anything lost along the way.
+                    This IP address points to a machine (EC2 instance). Whenever there is request sent, before it reaches our IP, it goes through a firewall. This firewall has certain rule list, which ensures only the right request passes through
+                                            Allow inbound TCP 443 from 0.0.0.0/0 (anywhere)
+                                            Allow inbound TCP 22  from <your office IP only>   (SSH)
+                                            (everything else: deny)
+                  The internet facing port is 443. So on EC2, the port 443 is bound by Nginx process. A port can be owned by only one process at a time. So Nginx sits in the front and handles all the internet facing requests. Nginx also handles the TLS/SSL based security. This way it happens in a centralised manner
+                  TLS: Transport Layer Security sits on top of TCP. TLS prevents anyone intercepting the traffic between the server and the browser abd reading the data presnet in a plain text, by agreeing on an encrytption key and encrypting it
+                  Now based on the config file, Nginx decides where the request will actually go.
+                                             server {
+                                                  listen 443 ssl;
+                                                  server_name api.myapp.com;
+                                                  ssl_certificate     /etc/letsencrypt/live/api.myapp.com/fullchain.pem;
+                                                  ssl_certificate_key /etc/letsencrypt/live/api.myapp.com/privkey.pem;
+
+                                                  location / {
+                                                        proxy_pass http://localhost:3001;
+                                                        }
+                                                }
+                  So now the Nginx creates a new connection to the localhost:3001 where our application is listening to. now the proxy-pass line helps us skip the DNS and firewall entirely and forwards your request. this is also the reason why its called reverse proxy because a normal (forward) proxy sits in front of clients and hides who’s asking; a reverse proxy sits in front of servers and hides which server is actually answering.
+
+                  Why cant we simply use frontend to handle all the tasks: 
+                    For this we need to understand what is the frontend working mechanism. all the logic we write is fetched by the browser from our server and its execueted by our browser. So here our browser is the runtime environment. this is different compared to our traditional backends where we send a request, the server processes the request and sends the result. so the actually processing happens in the server 
+                    Now browser runtimes are sandbox runtimes which means they are isolated from the operstaing system, processes and file system which means the code can access limited amount of resources like DOM, browser apis like local storage and coockies etc. this is done so that browsers cant access users data
+                    1. So, the security policies of browsers are so restrictive and this will prevent the backend from accessing the underlying file systems such as log file or access environment variables and browsers wont allow that
+                    2. when we call an api from a browser, it has to have the same domain url. we cannot call external apis unless they have appropriate CORS http headers
+                    3. backend servers maintain a connection pool to database server so that does not have to create or destroy connections as they receive thousand of requests per second and browsers are not designed to maintain persistent connections to databases and even if they did each user has to maintain their own create delete connections to the database which can be too overwhelming
+                    4. computing power: centralised backend server
+
+3. 
+                  
+                                    
+                                                         
